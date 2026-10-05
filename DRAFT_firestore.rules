@@ -1,0 +1,816 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 1. GLOBAL SAFETY NET (Default Deny)
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 2. REUSABLE HARDENED PRIMITIVES
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'thabitajeptoo004@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isStaffOrAdmin() {
+      return isAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['staff', 'admin']
+      );
+    }
+
+    // =========================================================================
+    // 3. ENTITY VALIDATION BLUEPRINTS (Anti-Update-Gap)
+    // =========================================================================
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid', 'email', 'fullName', 'role', 'department', 'phone', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'email', 'fullName', 'role', 'department', 'phone', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+      data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+      data.role is string && data.role.size() <= 20 && data.role in ['student', 'staff', 'admin'] &&
+      data.department is string && data.department.size() <= 80 &&
+      data.phone is string && data.phone.size() <= 30 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'assignedBy', 'createdAt']) &&
+      data.keys().hasOnly(['uid', 'email', 'assignedBy', 'createdAt']) &&
+      isValidId(data.uid) &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+      data.assignedBy is string && data.assignedBy.size() >= 1 && data.assignedBy.size() <= 128 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidStaffRecord(data) {
+      return data.keys().hasAll([
+        'staffId', 'fullName', 'position', 'department', 'responsibilities',
+        'officialEmail', 'officialPhone', 'status', 'isPublic', 'isDemo',
+        'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'staffId', 'fullName', 'position', 'department', 'responsibilities',
+        'officialEmail', 'officialPhone', 'status', 'isPublic', 'isDemo',
+        'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.staffId) &&
+      data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+      data.position is string && data.position.size() >= 1 && data.position.size() <= 100 &&
+      data.department is string && data.department.size() >= 1 && data.department.size() <= 100 &&
+      data.responsibilities is string && data.responsibilities.size() <= 600 &&
+      data.officialEmail is string && data.officialEmail.size() <= 160 &&
+      data.officialPhone is string && data.officialPhone.size() <= 40 &&
+      data.status is string && data.status.size() <= 30 && data.status in ['Active', 'On Leave', 'Inactive'] &&
+      data.isPublic is bool &&
+      data.isDemo is bool &&
+      data.createdBy is string && data.createdBy.size() <= 128 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidEligibilityCriteria(data) {
+      return data.keys().hasAll([
+        'criteriaId', 'categoryName', 'categoryCode', 'description', 'maxPoints',
+        'minAcademicScore', 'maxHouseholdIncomeKsh', 'priorityLevel',
+        'requiredDocuments', 'maxAwardKsh', 'financialYear', 'isActive',
+        'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'criteriaId', 'categoryName', 'categoryCode', 'description', 'maxPoints',
+        'minAcademicScore', 'maxHouseholdIncomeKsh', 'priorityLevel',
+        'requiredDocuments', 'maxAwardKsh', 'financialYear', 'isActive',
+        'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.criteriaId) &&
+      data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 120 &&
+      data.categoryCode is string && data.categoryCode.size() >= 1 && data.categoryCode.size() <= 50 &&
+      data.description is string && data.description.size() <= 600 &&
+      data.maxPoints is number && data.maxPoints >= 0 && data.maxPoints <= 100 &&
+      data.minAcademicScore is number && data.minAcademicScore >= 0 && data.minAcademicScore <= 100 &&
+      data.maxHouseholdIncomeKsh is number && data.maxHouseholdIncomeKsh >= 0 &&
+      data.priorityLevel is string && data.priorityLevel.size() <= 30 && data.priorityLevel in ['Critical', 'High', 'Standard'] &&
+      data.requiredDocuments is string && data.requiredDocuments.size() <= 400 &&
+      data.maxAwardKsh is number && data.maxAwardKsh >= 0 &&
+      data.financialYear is string && data.financialYear.size() <= 20 &&
+      data.isActive is bool &&
+      data.updatedBy is string && data.updatedBy.size() <= 128 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidSchoolRecord(data) {
+      return data.keys().hasAll([
+        'schoolId', 'schoolName', 'registrationNumber', 'schoolType', 'category',
+        'location', 'contactPhone', 'contactEmail', 'principalName', 'bankName',
+        'bankBranch', 'accountNumberMasked', 'beneficiaryCount',
+        'totalAllocatedKsh', 'totalPaidKsh', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'schoolId', 'schoolName', 'registrationNumber', 'schoolType', 'category',
+        'location', 'contactPhone', 'contactEmail', 'principalName', 'bankName',
+        'bankBranch', 'accountNumberMasked', 'beneficiaryCount',
+        'totalAllocatedKsh', 'totalPaidKsh', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.schoolId) &&
+      data.schoolName is string && data.schoolName.size() >= 1 && data.schoolName.size() <= 160 &&
+      data.registrationNumber is string && data.registrationNumber.size() <= 60 &&
+      data.schoolType is string && data.schoolType.size() <= 40 &&
+      data.schoolType in ['Secondary', 'University', 'TVET', 'College', 'Special School'] &&
+      data.category is string && data.category.size() <= 40 &&
+      data.category in ['National', 'Extra-County', 'County', 'Sub-County', 'Public University', 'Public TVET'] &&
+      data.location is string && data.location.size() <= 120 &&
+      data.contactPhone is string && data.contactPhone.size() <= 40 &&
+      data.contactEmail is string && data.contactEmail.size() <= 160 &&
+      data.principalName is string && data.principalName.size() <= 120 &&
+      data.bankName is string && data.bankName.size() <= 100 &&
+      data.bankBranch is string && data.bankBranch.size() <= 100 &&
+      data.accountNumberMasked is string && data.accountNumberMasked.size() <= 60 &&
+      data.beneficiaryCount is number && data.beneficiaryCount >= 0 &&
+      data.totalAllocatedKsh is number && data.totalAllocatedKsh >= 0 &&
+      data.totalPaidKsh is number && data.totalPaidKsh >= 0 &&
+      data.isDemo is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBursaryApplication(data) {
+      return data.keys().hasAll([
+        'applicationId', 'applicantUid', 'fullName', 'dateOfBirth', 'gender',
+        'phone', 'email', 'nationalIdOrBirthCert', 'ward', 'location',
+        'subLocation', 'schoolId', 'schoolName', 'schoolType', 'schoolCategory',
+        'admissionNumber', 'yearOfStudy', 'academicYear', 'term',
+        'previousPerformance', 'householdSituation', 'fatherEmploymentStatus',
+        'motherEmploymentStatus', 'householdMonthlyIncomeKsh',
+        'incomeSourceDescription', 'amountRequestedKsh', 'feeBalanceKsh',
+        'documentsSummary', 'documentVerificationStatus', 'eligibilityScore',
+        'eligibilityCategory', 'eligibilityQualified', 'eligibilityBreakdown',
+        'status', 'amountAwardedKsh', 'paymentReference', 'paymentStatus',
+        'reviewerRemarks', 'reviewedBy', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'applicationId', 'applicantUid', 'fullName', 'dateOfBirth', 'gender',
+        'phone', 'email', 'nationalIdOrBirthCert', 'ward', 'location',
+        'subLocation', 'schoolId', 'schoolName', 'schoolType', 'schoolCategory',
+        'admissionNumber', 'yearOfStudy', 'academicYear', 'term',
+        'previousPerformance', 'householdSituation', 'fatherEmploymentStatus',
+        'motherEmploymentStatus', 'householdMonthlyIncomeKsh',
+        'incomeSourceDescription', 'amountRequestedKsh', 'feeBalanceKsh',
+        'documentsSummary', 'documentVerificationStatus', 'eligibilityScore',
+        'eligibilityCategory', 'eligibilityQualified', 'eligibilityBreakdown',
+        'status', 'amountAwardedKsh', 'paymentReference', 'paymentStatus',
+        'reviewerRemarks', 'reviewedBy', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.applicationId) &&
+      isValidId(data.applicantUid) &&
+      data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+      data.dateOfBirth is string && data.dateOfBirth.size() <= 20 &&
+      data.gender is string && data.gender.size() <= 20 &&
+      data.phone is string && data.phone.size() <= 30 &&
+      data.email is string && data.email.size() <= 160 &&
+      data.nationalIdOrBirthCert is string && data.nationalIdOrBirthCert.size() <= 60 &&
+      data.ward is string && data.ward.size() <= 60 &&
+      data.location is string && data.location.size() <= 80 &&
+      data.subLocation is string && data.subLocation.size() <= 80 &&
+      data.schoolId is string && data.schoolId.size() <= 128 &&
+      data.schoolName is string && data.schoolName.size() <= 160 &&
+      data.schoolType is string && data.schoolType.size() <= 40 &&
+      data.schoolCategory is string && data.schoolCategory.size() <= 40 &&
+      data.admissionNumber is string && data.admissionNumber.size() <= 60 &&
+      data.yearOfStudy is string && data.yearOfStudy.size() <= 40 &&
+      data.academicYear is string && data.academicYear.size() <= 20 &&
+      data.term is string && data.term.size() <= 30 &&
+      data.previousPerformance is string && data.previousPerformance.size() <= 60 &&
+      data.householdSituation is string && data.householdSituation.size() <= 80 &&
+      data.fatherEmploymentStatus is string && data.fatherEmploymentStatus.size() <= 80 &&
+      data.motherEmploymentStatus is string && data.motherEmploymentStatus.size() <= 80 &&
+      data.householdMonthlyIncomeKsh is number && data.householdMonthlyIncomeKsh >= 0 &&
+      data.incomeSourceDescription is string && data.incomeSourceDescription.size() <= 300 &&
+      data.amountRequestedKsh is number && data.amountRequestedKsh >= 0 &&
+      data.feeBalanceKsh is number && data.feeBalanceKsh >= 0 &&
+      data.documentsSummary is string && data.documentsSummary.size() <= 500 &&
+      data.documentVerificationStatus is string && data.documentVerificationStatus.size() <= 40 &&
+      data.documentVerificationStatus in ['Pending Verification', 'Verified', 'Rejected', 'Requires Replacement'] &&
+      data.eligibilityScore is number && data.eligibilityScore >= 0 && data.eligibilityScore <= 100 &&
+      data.eligibilityCategory is string && data.eligibilityCategory.size() <= 80 &&
+      data.eligibilityQualified is bool &&
+      data.eligibilityBreakdown is string && data.eligibilityBreakdown.size() <= 600 &&
+      data.status is string && data.status.size() <= 40 &&
+      data.status in [
+        'Draft', 'Submitted', 'Under Review', 'Documents Required',
+        'Verification in Progress', 'Eligible', 'Not Eligible', 'Approved',
+        'Rejected', 'Awarded', 'Allocated to School', 'Payment Processed', 'Completed'
+      ] &&
+      data.amountAwardedKsh is number && data.amountAwardedKsh >= 0 &&
+      data.paymentReference is string && data.paymentReference.size() <= 80 &&
+      data.paymentStatus is string && data.paymentStatus.size() <= 40 &&
+      data.paymentStatus in ['Unallocated', 'Allocated to School', 'Cheque Disbursed', 'EFT Processed', 'Confirmed by School'] &&
+      data.reviewerRemarks is string && data.reviewerRemarks.size() <= 600 &&
+      data.reviewedBy is string && data.reviewedBy.size() <= 120 &&
+      data.isDemo is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidApplicationDocument(data) {
+      return data.keys().hasAll([
+        'docId', 'applicationId', 'applicantUid', 'documentType', 'fileName',
+        'mimeType', 'fileSizeBytes', 'dataUrlPreview', 'verificationStatus',
+        'verifierNotes', 'verifiedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'docId', 'applicationId', 'applicantUid', 'documentType', 'fileName',
+        'mimeType', 'fileSizeBytes', 'dataUrlPreview', 'verificationStatus',
+        'verifierNotes', 'verifiedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.docId) &&
+      isValidId(data.applicationId) &&
+      isValidId(data.applicantUid) &&
+      data.documentType is string && data.documentType.size() >= 1 && data.documentType.size() <= 100 &&
+      data.fileName is string && data.fileName.size() >= 1 && data.fileName.size() <= 160 &&
+      data.mimeType is string && data.mimeType.size() <= 40 &&
+      data.mimeType in ['application/pdf', 'image/jpeg', 'image/png'] &&
+      data.fileSizeBytes is number && data.fileSizeBytes >= 0 && data.fileSizeBytes <= 5242880 &&
+      data.dataUrlPreview is string && data.dataUrlPreview.size() <= 200000 &&
+      data.verificationStatus is string && data.verificationStatus.size() <= 40 &&
+      data.verificationStatus in ['Pending Verification', 'Verified', 'Rejected', 'Requires Replacement'] &&
+      data.verifierNotes is string && data.verifierNotes.size() <= 400 &&
+      data.verifiedBy is string && data.verifiedBy.size() <= 120 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidProjectRecord(data) {
+      return data.keys().hasAll([
+        'projectId', 'projectName', 'category', 'ward', 'location', 'subLocation',
+        'village', 'latitude', 'longitude', 'description', 'startDate',
+        'expectedCompletionDate', 'actualCompletionDate', 'status',
+        'approvedBudgetKsh', 'contractAmountKsh', 'amountSpentKsh',
+        'fundingSource', 'financialYear', 'percentageCompleted', 'currentStage',
+        'milestonesSummary', 'challenges', 'remarks', 'primaryPhotoUrl',
+        'beforePhotoCaption', 'duringPhotoCaption', 'afterPhotoCaption',
+        'isPublic', 'isDemo', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'projectId', 'projectName', 'category', 'ward', 'location', 'subLocation',
+        'village', 'latitude', 'longitude', 'description', 'startDate',
+        'expectedCompletionDate', 'actualCompletionDate', 'status',
+        'approvedBudgetKsh', 'contractAmountKsh', 'amountSpentKsh',
+        'fundingSource', 'financialYear', 'percentageCompleted', 'currentStage',
+        'milestonesSummary', 'challenges', 'remarks', 'primaryPhotoUrl',
+        'beforePhotoCaption', 'duringPhotoCaption', 'afterPhotoCaption',
+        'isPublic', 'isDemo', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.projectId) &&
+      data.projectName is string && data.projectName.size() >= 1 && data.projectName.size() <= 180 &&
+      data.category is string && data.category.size() <= 60 &&
+      data.category in [
+        'Education & Laboratories', 'Water & Sanitation', 'ICT & Youth Innovation',
+        'Roads & Bridges', 'Security & Administration', 'Environment & Afforestation', 'Sports & Arts'
+      ] &&
+      data.ward is string && data.ward.size() <= 60 &&
+      data.location is string && data.location.size() <= 100 &&
+      data.subLocation is string && data.subLocation.size() <= 100 &&
+      data.village is string && data.village.size() <= 100 &&
+      data.latitude is number &&
+      data.longitude is number &&
+      data.description is string && data.description.size() <= 1200 &&
+      data.startDate is string && data.startDate.size() <= 20 &&
+      data.expectedCompletionDate is string && data.expectedCompletionDate.size() <= 20 &&
+      data.actualCompletionDate is string && data.actualCompletionDate.size() <= 20 &&
+      data.status is string && data.status.size() <= 30 &&
+      data.status in ['Proposed', 'Approved', 'Planning', 'Procurement', 'Ongoing', 'Completed', 'Suspended', 'Cancelled'] &&
+      data.approvedBudgetKsh is number && data.approvedBudgetKsh >= 0 &&
+      data.contractAmountKsh is number && data.contractAmountKsh >= 0 &&
+      data.amountSpentKsh is number && data.amountSpentKsh >= 0 &&
+      data.fundingSource is string && data.fundingSource.size() <= 100 &&
+      data.financialYear is string && data.financialYear.size() <= 20 &&
+      data.percentageCompleted is number && data.percentageCompleted >= 0 && data.percentageCompleted <= 100 &&
+      data.currentStage is string && data.currentStage.size() <= 160 &&
+      data.milestonesSummary is string && data.milestonesSummary.size() <= 600 &&
+      data.challenges is string && data.challenges.size() <= 400 &&
+      data.remarks is string && data.remarks.size() <= 400 &&
+      data.primaryPhotoUrl is string && data.primaryPhotoUrl.size() <= 200000 &&
+      data.beforePhotoCaption is string && data.beforePhotoCaption.size() <= 200 &&
+      data.duringPhotoCaption is string && data.duringPhotoCaption.size() <= 200 &&
+      data.afterPhotoCaption is string && data.afterPhotoCaption.size() <= 200 &&
+      data.isPublic is bool &&
+      data.isDemo is bool &&
+      data.updatedBy is string && data.updatedBy.size() <= 128 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidProjectExpenditure(data) {
+      return data.keys().hasAll([
+        'expenditureId', 'projectId', 'projectName', 'expenditureDate',
+        'description', 'amountKsh', 'category', 'paymentReference',
+        'authorizedBy', 'recordedBy', 'isPublic', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'expenditureId', 'projectId', 'projectName', 'expenditureDate',
+        'description', 'amountKsh', 'category', 'paymentReference',
+        'authorizedBy', 'recordedBy', 'isPublic', 'isDemo', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.expenditureId) &&
+      isValidId(data.projectId) &&
+      data.projectName is string && data.projectName.size() <= 180 &&
+      data.expenditureDate is string && data.expenditureDate.size() <= 20 &&
+      data.description is string && data.description.size() <= 400 &&
+      data.amountKsh is number && data.amountKsh >= 0 &&
+      data.category is string && data.category.size() <= 80 &&
+      data.paymentReference is string && data.paymentReference.size() <= 80 &&
+      data.authorizedBy is string && data.authorizedBy.size() <= 120 &&
+      data.recordedBy is string && data.recordedBy.size() <= 128 &&
+      data.isPublic is bool &&
+      data.isDemo is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidProjectPhoto(data) {
+      return data.keys().hasAll([
+        'photoId', 'projectId', 'projectName', 'stage', 'caption', 'imageUrl',
+        'photographer', 'uploadDate', 'isPublic', 'uploadedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'photoId', 'projectId', 'projectName', 'stage', 'caption', 'imageUrl',
+        'photographer', 'uploadDate', 'isPublic', 'uploadedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.photoId) &&
+      isValidId(data.projectId) &&
+      data.projectName is string && data.projectName.size() <= 180 &&
+      data.stage is string && data.stage.size() <= 40 &&
+      data.stage in ['Before', 'During Construction', 'Completed'] &&
+      data.caption is string && data.caption.size() <= 300 &&
+      data.imageUrl is string && data.imageUrl.size() <= 200000 &&
+      data.photographer is string && data.photographer.size() <= 120 &&
+      data.uploadDate is string && data.uploadDate.size() <= 20 &&
+      data.isPublic is bool &&
+      data.uploadedBy is string && data.uploadedBy.size() <= 128 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll([
+        'announcementId', 'title', 'category', 'summary', 'content',
+        'effectiveDate', 'deadlineDate', 'isPublic', 'isPinned', 'isDemo',
+        'publishedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'announcementId', 'title', 'category', 'summary', 'content',
+        'effectiveDate', 'deadlineDate', 'isPublic', 'isPinned', 'isDemo',
+        'publishedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.announcementId) &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 180 &&
+      data.category is string && data.category.size() <= 50 &&
+      data.category in ['Bursary Intake', 'Application Deadline', 'Public Baraza / Meeting', 'Project Handover', 'Policy Notice'] &&
+      data.summary is string && data.summary.size() <= 300 &&
+      data.content is string && data.content.size() <= 1500 &&
+      data.effectiveDate is string && data.effectiveDate.size() <= 20 &&
+      data.deadlineDate is string && data.deadlineDate.size() <= 20 &&
+      data.isPublic is bool &&
+      data.isPinned is bool &&
+      data.isDemo is bool &&
+      data.publishedBy is string && data.publishedBy.size() <= 120 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidNotificationRecord(data) {
+      return data.keys().hasAll([
+        'notificationId', 'recipientUid', 'title', 'message', 'type',
+        'relatedRecordId', 'isRead', 'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'notificationId', 'recipientUid', 'title', 'message', 'type',
+        'relatedRecordId', 'isRead', 'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.notificationId) &&
+      data.recipientUid is string && data.recipientUid.size() >= 1 && data.recipientUid.size() <= 128 &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+      data.message is string && data.message.size() <= 500 &&
+      data.type is string && data.type.size() <= 60 &&
+      data.relatedRecordId is string && data.relatedRecordId.size() <= 128 &&
+      data.isRead is bool &&
+      data.createdBy is string && data.createdBy.size() <= 128 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll([
+        'logId', 'actorUid', 'actorName', 'actorRole', 'action',
+        'targetCollection', 'targetRecordId', 'previousValueSummary',
+        'newValueSummary', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'logId', 'actorUid', 'actorName', 'actorRole', 'action',
+        'targetCollection', 'targetRecordId', 'previousValueSummary',
+        'newValueSummary', 'createdAt'
+      ]) &&
+      isValidId(data.logId) &&
+      isValidId(data.actorUid) &&
+      data.actorName is string && data.actorName.size() <= 120 &&
+      data.actorRole is string && data.actorRole.size() <= 30 &&
+      data.action is string && data.action.size() <= 300 &&
+      data.targetCollection is string && data.targetCollection.size() <= 60 &&
+      data.targetRecordId is string && data.targetRecordId.size() <= 128 &&
+      data.previousValueSummary is string && data.previousValueSummary.size() <= 400 &&
+      data.newValueSummary is string && data.newValueSummary.size() <= 400 &&
+      data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // 4. COLLECTION MATCH BLOCKS
+    // =========================================================================
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isStaffOrAdmin());
+      allow list: if isStaffOrAdmin() && resource.data.uid is string;
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (isOwner(userId) && incoming().role == 'student')
+        );
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && (isOwner(adminUid) || isAdmin());
+      allow list: if isAdmin() && resource.data.uid is string;
+      allow create: if isValidId(adminUid) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == adminUid &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(adminUid) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(adminUid) && isAdmin();
+    }
+
+    match /staff_records/{staffId} {
+      allow get: if isValidId(staffId) && (resource.data.isPublic == true || isStaffOrAdmin());
+      allow list: if resource.data.isPublic == true || isStaffOrAdmin();
+      allow create: if isValidId(staffId) &&
+        isAdmin() &&
+        isValidStaffRecord(incoming()) &&
+        incoming().staffId == staffId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(staffId) &&
+        isAdmin() &&
+        isValidStaffRecord(incoming()) &&
+        incoming().staffId == existing().staffId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(staffId) && isAdmin();
+    }
+
+    match /eligibility_criteria/{criteriaId} {
+      allow get: if isValidId(criteriaId) && (resource.data.isActive == true || isStaffOrAdmin());
+      allow list: if resource.data.isActive == true || isStaffOrAdmin();
+      allow create: if isValidId(criteriaId) &&
+        isAdmin() &&
+        isValidEligibilityCriteria(incoming()) &&
+        incoming().criteriaId == criteriaId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(criteriaId) &&
+        isAdmin() &&
+        isValidEligibilityCriteria(incoming()) &&
+        incoming().criteriaId == existing().criteriaId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(criteriaId) && isAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow get: if isValidId(schoolId) && resource.data.schoolName is string;
+      allow list: if resource.data.schoolName is string;
+      allow create: if isValidId(schoolId) &&
+        isAdmin() &&
+        isValidSchoolRecord(incoming()) &&
+        incoming().schoolId == schoolId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(schoolId) &&
+        isAdmin() &&
+        isValidSchoolRecord(incoming()) &&
+        incoming().schoolId == existing().schoolId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(schoolId) && isAdmin();
+    }
+
+    match /bursary_applications/{applicationId} {
+      allow get: if isValidId(applicationId) &&
+        isSignedIn() &&
+        (resource.data.applicantUid == request.auth.uid || isStaffOrAdmin());
+      allow list: if isSignedIn() &&
+        (resource.data.applicantUid == request.auth.uid || isStaffOrAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(applicationId) &&
+        isValidBursaryApplication(incoming()) &&
+        incoming().applicationId == applicationId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().applicantUid == request.auth.uid &&
+            incoming().amountAwardedKsh == 0 &&
+            incoming().status in ['Draft', 'Submitted']
+          )
+        );
+      allow update: if isVerifiedUser() &&
+        isValidId(applicationId) &&
+        isValidBursaryApplication(incoming()) &&
+        incoming().applicationId == existing().applicationId &&
+        incoming().applicantUid == existing().applicantUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            // Action 1: Staff Verification & Review
+            isStaffOrAdmin() &&
+            incoming().amountAwardedKsh == existing().amountAwardedKsh &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'documentVerificationStatus', 'status', 'reviewerRemarks', 'reviewedBy', 'updatedAt'
+            ])
+          ) ||
+          (
+            // Action 2: Student Updating Non-Terminal Application
+            existing().applicantUid == request.auth.uid &&
+            !(existing().status in ['Approved', 'Awarded', 'Allocated to School', 'Payment Processed', 'Completed']) &&
+            incoming().amountAwardedKsh == existing().amountAwardedKsh &&
+            incoming().paymentStatus == existing().paymentStatus &&
+            incoming().paymentReference == existing().paymentReference &&
+            incoming().status in ['Draft', 'Submitted'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName', 'dateOfBirth', 'gender', 'phone', 'nationalIdOrBirthCert',
+              'location', 'subLocation', 'schoolId', 'schoolName', 'schoolType',
+              'schoolCategory', 'admissionNumber', 'yearOfStudy', 'academicYear',
+              'term', 'previousPerformance', 'householdSituation',
+              'fatherEmploymentStatus', 'motherEmploymentStatus',
+              'householdMonthlyIncomeKsh', 'incomeSourceDescription',
+              'amountRequestedKsh', 'feeBalanceKsh', 'documentsSummary',
+              'eligibilityScore', 'eligibilityCategory', 'eligibilityQualified',
+              'eligibilityBreakdown', 'status', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(applicationId) && isAdmin();
+    }
+
+    match /application_documents/{docId} {
+      allow get: if isValidId(docId) &&
+        isSignedIn() &&
+        (resource.data.applicantUid == request.auth.uid || isStaffOrAdmin());
+      allow list: if isSignedIn() &&
+        (resource.data.applicantUid == request.auth.uid || isStaffOrAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(docId) &&
+        isValidApplicationDocument(incoming()) &&
+        incoming().docId == docId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().applicantUid == request.auth.uid &&
+            exists(/databases/$(database)/documents/bursary_applications/$(incoming().applicationId))
+          )
+        );
+      allow update: if isVerifiedUser() &&
+        isValidId(docId) &&
+        isValidApplicationDocument(incoming()) &&
+        incoming().docId == existing().docId &&
+        incoming().applicationId == existing().applicationId &&
+        incoming().applicantUid == existing().applicantUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isStaffOrAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'verificationStatus', 'verifierNotes', 'verifiedBy', 'updatedAt'
+            ])
+          ) ||
+          (
+            existing().applicantUid == request.auth.uid &&
+            existing().verificationStatus != 'Verified' &&
+            incoming().verificationStatus == 'Pending Verification' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fileName', 'mimeType', 'fileSizeBytes', 'dataUrlPreview', 'verificationStatus', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (resource.data.isPublic == true || isStaffOrAdmin());
+      allow list: if resource.data.isPublic == true || isStaffOrAdmin();
+      allow create: if isValidId(projectId) &&
+        isAdmin() &&
+        isValidProjectRecord(incoming()) &&
+        incoming().projectId == projectId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(projectId) &&
+        isStaffOrAdmin() &&
+        isValidProjectRecord(incoming()) &&
+        incoming().projectId == existing().projectId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().approvedBudgetKsh == existing().approvedBudgetKsh &&
+            incoming().amountSpentKsh == existing().amountSpentKsh &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'percentageCompleted', 'currentStage', 'milestonesSummary',
+              'challenges', 'remarks', 'primaryPhotoUrl', 'afterPhotoCaption',
+              'status', 'updatedBy', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(projectId) && isAdmin();
+    }
+
+    match /project_expenditures/{expenditureId} {
+      allow get: if isValidId(expenditureId) && (resource.data.isPublic == true || isStaffOrAdmin());
+      allow list: if resource.data.isPublic == true || isStaffOrAdmin();
+      allow create: if isValidId(expenditureId) &&
+        isAdmin() &&
+        isValidProjectExpenditure(incoming()) &&
+        incoming().expenditureId == expenditureId &&
+        exists(/databases/$(database)/documents/projects/$(incoming().projectId)) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(expenditureId) &&
+        isAdmin() &&
+        isValidProjectExpenditure(incoming()) &&
+        incoming().expenditureId == existing().expenditureId &&
+        incoming().projectId == existing().projectId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(expenditureId) && isAdmin();
+    }
+
+    match /project_photos/{photoId} {
+      allow get: if isValidId(photoId) && (resource.data.isPublic == true || isStaffOrAdmin());
+      allow list: if resource.data.isPublic == true || isStaffOrAdmin();
+      allow create: if isValidId(photoId) &&
+        isStaffOrAdmin() &&
+        isValidProjectPhoto(incoming()) &&
+        incoming().photoId == photoId &&
+        exists(/databases/$(database)/documents/projects/$(incoming().projectId)) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(photoId) &&
+        isStaffOrAdmin() &&
+        isValidProjectPhoto(incoming()) &&
+        incoming().photoId == existing().photoId &&
+        incoming().projectId == existing().projectId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'stage', 'isPublic', 'updatedAt'])
+        );
+      allow delete: if isValidId(photoId) && isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow get: if isValidId(announcementId) && (resource.data.isPublic == true || isStaffOrAdmin());
+      allow list: if resource.data.isPublic == true || isStaffOrAdmin();
+      allow create: if isValidId(announcementId) &&
+        isAdmin() &&
+        isValidAnnouncement(incoming()) &&
+        incoming().announcementId == announcementId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(announcementId) &&
+        isAdmin() &&
+        isValidAnnouncement(incoming()) &&
+        incoming().announcementId == existing().announcementId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(announcementId) && isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) &&
+        isSignedIn() &&
+        (resource.data.recipientUid == request.auth.uid || isStaffOrAdmin());
+      allow list: if isSignedIn() &&
+        (resource.data.recipientUid == request.auth.uid || isStaffOrAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(notificationId) &&
+        isValidNotificationRecord(incoming()) &&
+        incoming().notificationId == notificationId &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(notificationId) &&
+        isValidNotificationRecord(incoming()) &&
+        incoming().notificationId == existing().notificationId &&
+        incoming().recipientUid == existing().recipientUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().recipientUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(notificationId) && isAdmin();
+    }
+
+    match /audit_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin() && resource.data.actorUid is string;
+      allow list: if isAdmin() && resource.data.actorUid is string;
+      allow create: if isVerifiedUser() &&
+        isValidId(logId) &&
+        isValidAuditLog(incoming()) &&
+        incoming().logId == logId &&
+        incoming().actorUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

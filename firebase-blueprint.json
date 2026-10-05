@@ -1,0 +1,1165 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account and role assignment for Kobujoi CDF system",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Verified email address"
+        },
+        "fullName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Full legal name"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["student", "staff", "admin"],
+          "maxLength": 20,
+          "description": "System role"
+        },
+        "department": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Department or ward assignment"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Contact phone number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp"
+        }
+      },
+      "required": ["uid", "email", "fullName", "role", "department", "phone", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator lookup document",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "assignedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "assignedBy", "createdAt"]
+    },
+    "StaffRecord": {
+      "title": "StaffRecord",
+      "description": "Kobujoi CDF staff directory member",
+      "type": "object",
+      "properties": {
+        "staffId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "position": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "department": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "responsibilities": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "officialEmail": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "officialPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "On Leave", "Inactive"],
+          "maxLength": 30
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["staffId", "fullName", "position", "department", "responsibilities", "officialEmail", "officialPhone", "status", "isPublic", "isDemo", "createdBy", "createdAt", "updatedAt"]
+    },
+    "EligibilityCriteria": {
+      "title": "EligibilityCriteria",
+      "description": "Configurable bursary eligibility category and scoring rules",
+      "type": "object",
+      "properties": {
+        "criteriaId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "categoryCode": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "maxPoints": {
+          "type": "number"
+        },
+        "minAcademicScore": {
+          "type": "number"
+        },
+        "maxHouseholdIncomeKsh": {
+          "type": "number"
+        },
+        "priorityLevel": {
+          "type": "string",
+          "enum": ["Critical", "High", "Standard"],
+          "maxLength": 30
+        },
+        "requiredDocuments": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "maxAwardKsh": {
+          "type": "number"
+        },
+        "financialYear": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["criteriaId", "categoryName", "categoryCode", "description", "maxPoints", "minAcademicScore", "maxHouseholdIncomeKsh", "priorityLevel", "requiredDocuments", "maxAwardKsh", "financialYear", "isActive", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "SchoolRecord": {
+      "title": "SchoolRecord",
+      "description": "Registered educational institution receiving bursary allocations",
+      "type": "object",
+      "properties": {
+        "schoolId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "schoolName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "registrationNumber": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "schoolType": {
+          "type": "string",
+          "enum": ["Secondary", "University", "TVET", "College", "Special School"],
+          "maxLength": 40
+        },
+        "category": {
+          "type": "string",
+          "enum": ["National", "Extra-County", "County", "Sub-County", "Public University", "Public TVET"],
+          "maxLength": 40
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "contactPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "contactEmail": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "principalName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "bankName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "bankBranch": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "accountNumberMasked": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "beneficiaryCount": {
+          "type": "number"
+        },
+        "totalAllocatedKsh": {
+          "type": "number"
+        },
+        "totalPaidKsh": {
+          "type": "number"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["schoolId", "schoolName", "registrationNumber", "schoolType", "category", "location", "contactPhone", "contactEmail", "principalName", "bankName", "bankBranch", "accountNumberMasked", "beneficiaryCount", "totalAllocatedKsh", "totalPaidKsh", "isDemo", "createdAt", "updatedAt"]
+    },
+    "BursaryApplication": {
+      "title": "BursaryApplication",
+      "description": "Student bursary application, eligibility evaluation, and award record",
+      "type": "object",
+      "properties": {
+        "applicationId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "applicantUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "gender": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "nationalIdOrBirthCert": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "ward": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "subLocation": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "schoolId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "schoolName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "schoolType": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "schoolCategory": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "admissionNumber": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "yearOfStudy": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "academicYear": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "term": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "previousPerformance": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "householdSituation": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "fatherEmploymentStatus": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "motherEmploymentStatus": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "householdMonthlyIncomeKsh": {
+          "type": "number"
+        },
+        "incomeSourceDescription": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "amountRequestedKsh": {
+          "type": "number"
+        },
+        "feeBalanceKsh": {
+          "type": "number"
+        },
+        "documentsSummary": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "documentVerificationStatus": {
+          "type": "string",
+          "enum": ["Pending Verification", "Verified", "Rejected", "Requires Replacement"],
+          "maxLength": 40
+        },
+        "eligibilityScore": {
+          "type": "number"
+        },
+        "eligibilityCategory": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "eligibilityQualified": {
+          "type": "boolean"
+        },
+        "eligibilityBreakdown": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Submitted",
+            "Under Review",
+            "Documents Required",
+            "Verification in Progress",
+            "Eligible",
+            "Not Eligible",
+            "Approved",
+            "Rejected",
+            "Awarded",
+            "Allocated to School",
+            "Payment Processed",
+            "Completed"
+          ],
+          "maxLength": 40
+        },
+        "amountAwardedKsh": {
+          "type": "number"
+        },
+        "paymentReference": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["Unallocated", "Allocated to School", "Cheque Disbursed", "EFT Processed", "Confirmed by School"],
+          "maxLength": 40
+        },
+        "reviewerRemarks": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "reviewedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "applicationId",
+        "applicantUid",
+        "fullName",
+        "dateOfBirth",
+        "gender",
+        "phone",
+        "email",
+        "nationalIdOrBirthCert",
+        "ward",
+        "location",
+        "subLocation",
+        "schoolId",
+        "schoolName",
+        "schoolType",
+        "schoolCategory",
+        "admissionNumber",
+        "yearOfStudy",
+        "academicYear",
+        "term",
+        "previousPerformance",
+        "householdSituation",
+        "fatherEmploymentStatus",
+        "motherEmploymentStatus",
+        "householdMonthlyIncomeKsh",
+        "incomeSourceDescription",
+        "amountRequestedKsh",
+        "feeBalanceKsh",
+        "documentsSummary",
+        "documentVerificationStatus",
+        "eligibilityScore",
+        "eligibilityCategory",
+        "eligibilityQualified",
+        "eligibilityBreakdown",
+        "status",
+        "amountAwardedKsh",
+        "paymentReference",
+        "paymentStatus",
+        "reviewerRemarks",
+        "reviewedBy",
+        "isDemo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ApplicationDocument": {
+      "title": "ApplicationDocument",
+      "description": "Private supporting document uploaded by student applicant",
+      "type": "object",
+      "properties": {
+        "docId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "applicationId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "applicantUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "documentType": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "fileName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "mimeType": {
+          "type": "string",
+          "enum": ["application/pdf", "image/jpeg", "image/png"],
+          "maxLength": 40
+        },
+        "fileSizeBytes": {
+          "type": "number"
+        },
+        "dataUrlPreview": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["Pending Verification", "Verified", "Rejected", "Requires Replacement"],
+          "maxLength": 40
+        },
+        "verifierNotes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "verifiedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "docId",
+        "applicationId",
+        "applicantUid",
+        "documentType",
+        "fileName",
+        "mimeType",
+        "fileSizeBytes",
+        "dataUrlPreview",
+        "verificationStatus",
+        "verifierNotes",
+        "verifiedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProjectRecord": {
+      "title": "ProjectRecord",
+      "description": "Kobujoi CDF constituency development infrastructure project",
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectName": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Education & Laboratories",
+            "Water & Sanitation",
+            "ICT & Youth Innovation",
+            "Roads & Bridges",
+            "Security & Administration",
+            "Environment & Afforestation",
+            "Sports & Arts"
+          ],
+          "maxLength": 60
+        },
+        "ward": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "subLocation": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "village": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "startDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "expectedCompletionDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "actualCompletionDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Proposed", "Approved", "Planning", "Procurement", "Ongoing", "Completed", "Suspended", "Cancelled"],
+          "maxLength": 30
+        },
+        "approvedBudgetKsh": {
+          "type": "number"
+        },
+        "contractAmountKsh": {
+          "type": "number"
+        },
+        "amountSpentKsh": {
+          "type": "number"
+        },
+        "fundingSource": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "financialYear": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "percentageCompleted": {
+          "type": "number"
+        },
+        "currentStage": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "milestonesSummary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "challenges": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "remarks": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "primaryPhotoUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "beforePhotoCaption": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "duringPhotoCaption": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "afterPhotoCaption": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "projectId",
+        "projectName",
+        "category",
+        "ward",
+        "location",
+        "subLocation",
+        "village",
+        "latitude",
+        "longitude",
+        "description",
+        "startDate",
+        "expectedCompletionDate",
+        "actualCompletionDate",
+        "status",
+        "approvedBudgetKsh",
+        "contractAmountKsh",
+        "amountSpentKsh",
+        "fundingSource",
+        "financialYear",
+        "percentageCompleted",
+        "currentStage",
+        "milestonesSummary",
+        "challenges",
+        "remarks",
+        "primaryPhotoUrl",
+        "beforePhotoCaption",
+        "duringPhotoCaption",
+        "afterPhotoCaption",
+        "isPublic",
+        "isDemo",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProjectExpenditure": {
+      "title": "ProjectExpenditure",
+      "description": "Financial expenditure voucher against a constituency project budget",
+      "type": "object",
+      "properties": {
+        "expenditureId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectName": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "expenditureDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "amountKsh": {
+          "type": "number"
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "paymentReference": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "authorizedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "recordedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "expenditureId",
+        "projectId",
+        "projectName",
+        "expenditureDate",
+        "description",
+        "amountKsh",
+        "category",
+        "paymentReference",
+        "authorizedBy",
+        "recordedBy",
+        "isPublic",
+        "isDemo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProjectPhoto": {
+      "title": "ProjectPhoto",
+      "description": "Before, during, or completed project progress photograph",
+      "type": "object",
+      "properties": {
+        "photoId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectName": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["Before", "During Construction", "Completed"],
+          "maxLength": 40
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "photographer": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "uploadDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "uploadedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "photoId",
+        "projectId",
+        "projectName",
+        "stage",
+        "caption",
+        "imageUrl",
+        "photographer",
+        "uploadDate",
+        "isPublic",
+        "uploadedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Public constituency announcement or bursary notice",
+      "type": "object",
+      "properties": {
+        "announcementId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Bursary Intake", "Application Deadline", "Public Baraza / Meeting", "Project Handover", "Policy Notice"],
+          "maxLength": 50
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 1500
+        },
+        "effectiveDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "deadlineDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "isPinned": {
+          "type": "boolean"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "publishedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "announcementId",
+        "title",
+        "category",
+        "summary",
+        "content",
+        "effectiveDate",
+        "deadlineDate",
+        "isPublic",
+        "isPinned",
+        "isDemo",
+        "publishedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NotificationRecord": {
+      "title": "NotificationRecord",
+      "description": "In-system notification for student or administrator",
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recipientUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "relatedRecordId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isRead": {
+          "type": "boolean"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "notificationId",
+        "recipientUid",
+        "title",
+        "message",
+        "type",
+        "relatedRecordId",
+        "isRead",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable administrative and staff action audit trail",
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "actorRole": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "targetCollection": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "targetRecordId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "previousValueSummary": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "newValueSummary": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "logId",
+        "actorUid",
+        "actorName",
+        "actorRole",
+        "action",
+        "targetCollection",
+        "targetRecordId",
+        "previousValueSummary",
+        "newValueSummary",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and RBAC role assignments"
+    },
+    "/admins/{adminUid}": {
+      "schema": "AdminRecord",
+      "description": "Trusted administrator lookup table"
+    },
+    "/staff_records/{staffId}": {
+      "schema": "StaffRecord",
+      "description": "Kobujoi CDF staff directory and role responsibilities"
+    },
+    "/eligibility_criteria/{criteriaId}": {
+      "schema": "EligibilityCriteria",
+      "description": "Configurable bursary eligibility rules and scoring parameters"
+    },
+    "/schools/{schoolId}": {
+      "schema": "SchoolRecord",
+      "description": "Registered schools and bursary allocation totals"
+    },
+    "/bursary_applications/{applicationId}": {
+      "schema": "BursaryApplication",
+      "description": "Student bursary applications, eligibility assessments, and awards"
+    },
+    "/application_documents/{docId}": {
+      "schema": "ApplicationDocument",
+      "description": "Private student supporting documents"
+    },
+    "/projects/{projectId}": {
+      "schema": "ProjectRecord",
+      "description": "Constituency development projects and progress"
+    },
+    "/project_expenditures/{expenditureId}": {
+      "schema": "ProjectExpenditure",
+      "description": "Project budget expenditure records"
+    },
+    "/project_photos/{photoId}": {
+      "schema": "ProjectPhoto",
+      "description": "Project progress photographs"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Public announcements and bursary deadlines"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "NotificationRecord",
+      "description": "User and admin notifications"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable audit trail logs"
+    }
+  }
+}
