@@ -33,11 +33,192 @@
 }
 
 @media print {
-  .no-print {
-    display: none !important;
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
   }
-  body {
+
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html,
+  body,
+  #root,
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #FFFFFF !important;
     color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+  }
+
+  /* 1. Hide Navigation, Sidebars, Filter Bars, Buttons, and Interactive Controls */
+  .no-print,
+  header,
+  aside,
+  nav,
+  footer,
+  button,
+  input[type="file"],
+  .leaflet-control-container,
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Hide search/filter input toolbars when printing project lists or registers */
+  input[type="text"],
+  input[type="search"],
+  select {
+    border: 1px solid #CBD5E1 !important;
+    background: transparent !important;
+  }
+
+  /* 2. Reset Layout Containers & Scrollable Regions for Full-Page Print Flow */
+  .min-h-screen,
+  .min-h-\[calc\(100vh-4rem\)\],
+  .max-h-\[90vh\],
+  .max-h-\[calc\(100vh-12rem\)\],
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-hidden {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .max-w-\[1280px\],
+  .max-w-4xl,
+  .max-w-lg {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Expand Student Bursary Status and Main Report Columns to full width in print */
+  .lg\:col-span-7,
+  .lg\:col-span-5,
+  .xl\:col-span-7,
+  .xl\:col-span-5 {
+    grid-column: span 12 / span 12 !important;
+    width: 100% !important;
+  }
+
+  /* 3. Clean Table Formatting for Reports, Bursary Registers & Expenditure Ledgers */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #94A3B8 !important;
+    margin-top: 8pt !important;
+    margin-bottom: 12pt !important;
+    font-size: 9.5pt !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+    background-color: #F1F5F9 !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #CBD5E1 !important;
+    padding: 6pt 8pt !important;
+    color: #0F172A !important;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: 700 !important;
+    background-color: #F1F5F9 !important;
+    color: #0F172A !important;
+  }
+
+  /* 4. Page Break & Card Integrity Rules for Bursary Status & Project Lists */
+  section,
+  article,
+  .rounded-xl,
+  .rounded-md,
+  .print-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Allow large wrapper sections that contain multiple project cards or tables to break naturally between children */
+  main > div,
+  .space-y-8,
+  .space-y-10,
+  .space-y-6,
+  .space-y-4 {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Individual cards inside project lists, bursary status blocks, and KPI grids must not split mid-card */
+  .space-y-4 > div,
+  .grid > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border-color: #94A3B8 !important;
+    background-color: #FFFFFF !important;
+  }
+
+  /* Heading & Typography Orphan/Widow Control */
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: #000000 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Constrain project images so they print crisply without consuming entire pages */
+  img {
+    max-height: 140pt !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Explicit Page Break Helper Classes */
+  .print-page-break,
+  .print-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .print-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 }
