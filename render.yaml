@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kobujoi-cdf-stystem
+    runtime: node
+    plan: free
+    buildCommand: npm install --no-audit --no-fund && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0

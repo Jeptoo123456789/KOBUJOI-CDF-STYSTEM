@@ -50,7 +50,6 @@ import {
 } from './services/cdfFirestoreService.ts';
 import { PublicPortal, PublicTab } from './components/PublicPortal.tsx';
 import { StudentPortal } from './components/StudentPortal.tsx';
-import { AdminStaffPortal } from './components/AdminStaffPortal.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import {
   Landmark,
@@ -63,6 +62,11 @@ import {
 } from 'lucide-react';
 
 const BOOTSTRAP_ADMIN_EMAIL = 'thabitajeptoo004@gmail.com';
+const AdminStaffPortal = React.lazy(() =>
+  import('./components/AdminStaffPortal.tsx').then(({ AdminStaffPortal }) => ({
+    default: AdminStaffPortal,
+  }))
+);
 
 function mergeById<T>(seedItems: T[], firestoreItems: T[], idKey: keyof T): T[] {
   const map = new Map<string, T>();
@@ -203,16 +207,25 @@ export default function App() {
       (err) => console.warn('Public staff listener notice:', err.message)
     );
 
-    const unsubCriteria = onSnapshot(
+    const criteriaQuery = query(
       collection(db, 'eligibility_criteria'),
+      where('isActive', '==', true)
+    );
+    const unsubCriteria = onSnapshot(
+      criteriaQuery,
       (snap) => {
         setFsCriteria(snap.docs.map((d) => d.data() as EligibilityCriteria));
       },
       (err) => console.warn('Eligibility criteria listener notice:', err.message)
     );
 
-    const unsubSchools = onSnapshot(
+    const schoolsQuery = query(
       collection(db, 'schools'),
+      where('schoolName', '>=', ''),
+      where('schoolName', '<=', '\uf8ff')
+    );
+    const unsubSchools = onSnapshot(
+      schoolsQuery,
       (snap) => {
         setFsSchools(snap.docs.map((d) => d.data() as SchoolRecord));
       },
@@ -583,31 +596,33 @@ export default function App() {
           )}
 
           {(portalMode === 'staff' || portalMode === 'admin') && (
-            <AdminStaffPortal
-              roleMode={portalMode}
-              currentUser={
-                currentUser
-                  ? {
-                      uid: currentUser.uid,
-                      email: currentUser.email || '',
-                      displayName: currentUser.displayName || 'CDF Officer',
-                    }
-                  : null
-              }
-              userProfile={userProfile}
-              onRequireSignIn={handleGoogleSignIn}
-              applications={mergedApplications}
-              documents={fsDocuments}
-              schools={mergedSchools}
-              criteriaList={mergedCriteria}
-              staffList={mergedStaff}
-              projects={mergedProjects}
-              expenditures={mergedExpenditures}
-              photos={mergedPhotos}
-              announcements={mergedAnnouncements}
-              notifications={fsNotifications}
-              auditLogs={fsAuditLogs}
-            />
+            <React.Suspense fallback={null}>
+              <AdminStaffPortal
+                roleMode={portalMode}
+                currentUser={
+                  currentUser
+                    ? {
+                        uid: currentUser.uid,
+                        email: currentUser.email || '',
+                        displayName: currentUser.displayName || 'CDF Officer',
+                      }
+                    : null
+                }
+                userProfile={userProfile}
+                onRequireSignIn={handleGoogleSignIn}
+                applications={mergedApplications}
+                documents={fsDocuments}
+                schools={mergedSchools}
+                criteriaList={mergedCriteria}
+                staffList={mergedStaff}
+                projects={mergedProjects}
+                expenditures={mergedExpenditures}
+                photos={mergedPhotos}
+                announcements={mergedAnnouncements}
+                notifications={fsNotifications}
+                auditLogs={fsAuditLogs}
+              />
+            </React.Suspense>
           )}
         </main>
       </div>
